@@ -2,6 +2,7 @@
 __pycache__/
 *.py[codz]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -218,3 +219,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+#artifacts
+data/processed.csv
+data/train.csv
+data/test.csv
+artifacts/model.pkl
+data/raw.csv

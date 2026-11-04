@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Used Car Price Estimator</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+{# a dropdown: name, label, list of (value, text) #}
+{% macro dropdown(name, label, items) %}
+  <div class="field">
+    <label for="{{ name }}">{{ label }}</label>
+    <select id="{{ name }}" name="{{ name }}" required>
+      <option value="" disabled {% if not form.get(name) %}selected{% endif %}>Choose...</option>
+      {% for value, text in items %}
+        <option value="{{ value }}" {% if form.get(name) == value|string %}selected{% endif %}>{{ text }}</option>
+      {% endfor %}
+    </select>
+  </div>
+{% endmacro %}
+
+{# a number box: name, then (label, min, max, whole number?) #}
+{% macro number(name, spec) %}
+  <div class="field">
+    <label for="{{ name }}">{{ spec[0] }}</label>
+    <input id="{{ name }}" name="{{ name }}" type="number" inputmode="decimal"
+           min="{{ spec[1] }}" max="{{ spec[2] }}" step="{{ 1 if spec[3] else 0.1 }}"
+           value="{{ form.get(name, '') }}" required>
+  </div>
+{% endmacro %}
+
+<main class="container">
+
+  <header class="header">
+    <p class="eyebrow">Price estimator</p>
+    <h1>Used Car <span class="accent">Price</span> Estimator</h1>
+    <p class="lead">Enter the details of a car and get an estimated selling price in rupees.</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ===================== the form ===================== -->
+    <form method="post" action="{{ url_for('home') }}#result" class="card" id="car-form">
+
+      <h2>Car</h2>
+      <div class="grid">
+        <div class="field">
+          <label for="brand">Brand</label>
+          <input id="brand" name="brand" list="brand-list" autocomplete="off"
+                 placeholder="Type or choose, e.g. Maruti" value="{{ form.get('brand', '') }}" required>
+          <datalist id="brand-list">
+            {% for brand in brands %}<option value="{{ brand }}">{% endfor %}
+          </datalist>
+        </div>
+
+        <div class="field">
+          <label for="model">Model</label>
+          <input id="model" name="model" list="model-list" autocomplete="off"
+                 placeholder="Type or choose, e.g. Swift" value="{{ form.get('model', '') }}" required>
+          <datalist id="model-list"></datalist>
+        </div>
+      </div>
+
+      <h2>Usage</h2>
+      <div class="grid">
+        {{ number("vehicle_age", number_fields["vehicle_age"]) }}
+        {{ number("km_driven", number_fields["km_driven"]) }}
+      </div>
+
+      <h2>Specifications</h2>
+      <div class="grid">
+        {{ dropdown("fuel_type", "Fuel type", fuels) }}
+        {{ dropdown("transmission_type", "Transmission", transmissions) }}
+        {{ dropdown("seller_type", "Seller type", sellers) }}
+        {{ dropdown("seats", "Seats", seats) }}
+        {{ number("mileage", number_fields["mileage"]) }}
+        {{ number("engine", number_fields["engine"]) }}
+        {{ number("max_power", number_fields["max_power"]) }}
+      </div>
+      <p class="hint">These are filled in with typical values when you pick a model. Change them if your car is different.</p>
+
+      <button type="submit">Estimate price</button>
+    </form>
+
+    <!-- ===================== the result ===================== -->
+    <section class="card result" id="result" aria-live="polite">
+
+      {% if error %}
+        <div class="message error" role="alert">{{ error }}</div>
+      {% endif %}
+
+      {% if result %}
+        <p class="result-car">{{ result.car }}</p>
+        <p class="result-label">Estimated price</p>
+        <p class="readout"><span class="rupee">&#8377;</span> {{ result.price }}</p>
+        <p class="result-words">about {{ result.words }}</p>
+        <p class="result-range">Typical range: &#8377; {{ result.low }} to &#8377; {{ result.high }}</p>
+
+        {% if result.warning %}
+          <div class="message warning">{{ result.warning }}</div>
+        {% endif %}
+
+        {% set c = result.chart %}
+        <h3>Value curve</h3>
+        <p class="chart-caption">The same car at different ages, driven the same km per year.</p>
+
+        <svg class="chart" viewBox="0 0 {{ c.width }} {{ c.height }}" role="img"
+             aria-labelledby="chart-title chart-desc">
+          <title id="chart-title">Estimated price by vehicle age</title>
+          <desc id="chart-desc">Line chart. The estimated price changes with the age of the car. Your car is marked at {{ c.label }}.</desc>
+          <defs>
+            <linearGradient id="area-fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" class="stop-top"/>
+              <stop offset="1" class="stop-bottom"/>
+            </linearGradient>
+          </defs>
+
+          {% for y, label in c.y_ticks %}
+            <line class="grid-line" x1="{{ c.left }}" x2="{{ c.right }}" y1="{{ y }}" y2="{{ y }}"/>
+            <text class="tick" x="{{ c.left - 10 }}" y="{{ y + 4 }}" text-anchor="end">&#8377;{{ label }}</text>
+          {% endfor %}
+
+          {% for x, label in c.x_ticks %}
+            <text class="tick" x="{{ x }}" y="{{ c.base_y + 20 }}" text-anchor="middle">{{ label }}</text>
+          {% endfor %}
+          <text class="axis-title" x="{{ (c.left + c.right) / 2 }}" y="{{ c.height - 4 }}" text-anchor="middle">Vehicle age (years)</text>
+
+          <path class="area" d="{{ c.area }}"/>
+          <path class="line" d="{{ c.line }}"/>
+
+          <line class="marker-guide" x1="{{ c.marker_x }}" x2="{{ c.marker_x }}" y1="{{ c.marker_y }}" y2="{{ c.base_y }}"/>
+          <circle class="marker" cx="{{ c.marker_x }}" cy="{{ c.marker_y }}" r="6"/>
+          <text class="marker-label" x="{{ c.label_x }}" y="{{ c.label_y }}" text-anchor="{{ c.label_anchor }}">{{ c.label }}</text>
+        </svg>
+
+      {% elif not error %}
+        <div class="placeholder">
+          <p class="placeholder-title">Your estimate will appear here</p>
+          <p>Fill in the form and press <strong>Estimate price</strong>. You will see the price and how it changes as the car gets older.</p>
+        </div>
+      {% endif %}
+
+    </section>
+  </div>
+
+  <p class="note">
+    This is an estimate based on past listings, not an official valuation.
+    The average error is about 13%, and prices vary with condition and number of owners, so treat the result as a guide.
+  </p>
+
+</main>
+
+<script id="car-data" type="application/json">{{ page_data|tojson }}</script>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+
+</body>
+</html>
