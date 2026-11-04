@@ -3,9 +3,9 @@
 Estimates the selling price (in rupees) of a used car from its brand, model, age, kilometres driven and specifications.
 It includes the full workflow (data cleaning, feature engineering, model comparison) and a small website built with Flask.
 
-![Used Car Estimator website](./Estimator_Project/docs/images/used_car_estimator_1)
-![Used Car Estimator website demo](./Estimator_Project/docs/images/used_car_estimator_result_1)
-![Used Car Estimator website demo](./Estimator_Project/docs/images/used_car_estimator_result_1)
+![Used Car Estimator website](docs/images/used_car_estimator_1.png)
+![Used Car Estimator website demo](docs/images/used_car_estimator_result_1.png)
+![Used Car Estimator website demo](docs/images/used_car_estimator_result_2.png)
 
 
 ## How accurate is it?
